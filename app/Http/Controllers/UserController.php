@@ -54,20 +54,20 @@ class UserController extends Controller
 
     public function edit($id)
     {
-        if(!$user = $this->model->find($id))
-            return redirect()->back();
+        $user = User::find($id);
 
         return view('users.edit', compact('user'));
     }
 
     public function update(StoreUpdateUserRequest $request, $id)
     {
-        if(!$user = $this->model->find($id))
-            return redirect()->back();
+        $user = User::find($id);
 
-        $data = $request->only('name', 'email');
-        if ($request->password)
+        $data = $request->except("password", "password_confirmation");
+        if ($request->has("password")) {
             $data['password'] = bcrypt($request->password);
+            $data['password_confirmation'] = bcrypt($request->password_confirmation);
+        }
 
         if($request->image){
             $file = $request['image'];
@@ -84,8 +84,7 @@ class UserController extends Controller
 
     public function delete($id)
     {
-        if (!$user = $this->model->find($id))
-            return redirect()->back();
+        $user = User::find($id);
         $user->delete();
 
         return redirect()->route('users.index');

@@ -33,18 +33,26 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'phone' => $request->phone,
+            'is_admin' => $request->type_user == 'admin' ? 1 : 0,
         ]);
 
         event(new Registered($user));
 
-        Auth::login($user);
+        if (!Auth::check()) {
+            Auth::login($user);
+        }else if (Auth::user()->is_admin) {
+            return redirect()->route('dashboard')->with('success', 'Usuário cadastrado com sucesso!');
+        }
 
+        // return $request;
         return redirect(route('dashboard', absolute: false));
     }
 }
