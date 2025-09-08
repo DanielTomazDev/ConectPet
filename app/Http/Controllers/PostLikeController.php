@@ -3,63 +3,59 @@
 namespace App\Http\Controllers;
 
 use App\Models\PostLike;
+use App\Models\PetPost;
 use Illuminate\Http\Request;
 
 class PostLikeController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Toggle like for a post.
      */
-    public function index()
+    public function toggle(Request $request, $postId)
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(PostLike $postLike)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(PostLike $postLike)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, PostLike $postLike)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(PostLike $postLike)
-    {
-        //
+        try {
+            \Log::info('PostLikeController::toggle called', ['postId' => $postId, 'user' => auth()->id()]);
+            
+            $post = PetPost::findOrFail($postId);
+            $user = auth()->user();
+            
+            if (!$user) {
+                \Log::error('User not authenticated');
+                return response()->json(['error' => 'User not authenticated'], 401);
+            }
+            
+            $existingLike = PostLike::where('post_id', $postId)
+                ->where('user_id', $user->id)
+                ->first();
+            
+            if ($existingLike) {
+                // Remove like
+                $existingLike->delete();
+                $liked = false;
+                \Log::info('Like removed');
+            } else {
+                // Add like
+                PostLike::create([
+                    'post_id' => $postId,
+                    'user_id' => $user->id,
+                ]);
+                $liked = true;
+                \Log::info('Like added');
+            }
+            
+            // Update likes count
+            $likesCount = PostLike::where('post_id', $postId)->count();
+            $post->update(['likes_count' => $likesCount]);
+            
+            \Log::info('Response data', ['liked' => $liked, 'likes_count' => $likesCount]);
+            
+            return response()->json([
+                'liked' => $liked,
+                'likes_count' => $likesCount
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in PostLikeController::toggle', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 }

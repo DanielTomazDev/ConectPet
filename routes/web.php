@@ -31,12 +31,12 @@ Route::get('/dashboard', function () {
     $totalMatches = \App\Models\PetMatch::count();
     
     // Buscar todos os posts dos pets com usuários e pets
-    $allPosts = \App\Models\PetPost::with(['pet.user'])->latest()->paginate(10);
+    $allPosts = \App\Models\PetPost::with(['pet.user', 'likes', 'comments.user'])->latest()->paginate(10);
     
-    // Marcar quais pets o usuário já curtiu (para compatibilidade)
-    $userLikedPets = \App\Models\PetLike::where('user_id', $user->id)->pluck('pet_id')->toArray();
+    // Marcar quais posts o usuário já curtiu
+    $userLikedPosts = \App\Models\PostLike::where('user_id', $user->id)->pluck('post_id')->toArray();
     
-    return view('dashboard', compact('petsCount', 'totalPets', 'totalUsers', 'totalMatches', 'allPosts', 'userLikedPets'));
+    return view('dashboard', compact('petsCount', 'totalPets', 'totalUsers', 'totalMatches', 'allPosts', 'userLikedPosts'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -45,6 +45,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+// Rotas para curtidas e comentários de posts (fora do middleware auth para evitar redirecionamento)
+Route::post('/posts/{post}/like', [App\Http\Controllers\PostLikeController::class, 'toggle'])->name('posts.like');
+Route::post('/posts/{post}/comment', [App\Http\Controllers\PostCommentController::class, 'store'])->name('posts.comment');
 
 require __DIR__.'/auth.php';
 
@@ -77,4 +81,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/pets/{pet}/posts/{post}/edit', [App\Http\Controllers\PetPostController::class, 'edit'])->name('pet-posts.edit');
     Route::put('/pets/{pet}/posts/{post}', [App\Http\Controllers\PetPostController::class, 'update'])->name('pet-posts.update');
     Route::delete('/pets/{pet}/posts/{post}', [App\Http\Controllers\PetPostController::class, 'destroy'])->name('pet-posts.destroy');
+    
+    // Rota de teste
+    Route::get('/test-posts', function() {
+        return response()->json(['message' => 'Posts routes working']);
+    });
+    
+    // Rota de teste para curtidas
+    Route::post('/test-like/{post}', function($post) {
+        return response()->json(['message' => 'Like test working', 'post' => $post]);
+    });
 });

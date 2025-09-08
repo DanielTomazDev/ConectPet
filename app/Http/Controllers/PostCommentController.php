@@ -3,63 +3,38 @@
 namespace App\Http\Controllers;
 
 use App\Models\PostComment;
+use App\Models\PetPost;
 use Illuminate\Http\Request;
 
 class PostCommentController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Store a new comment for a post.
      */
-    public function index()
+    public function store(Request $request, $postId)
     {
-        //
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(PostComment $postComment)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(PostComment $postComment)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, PostComment $postComment)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(PostComment $postComment)
-    {
-        //
+        $request->validate([
+            'content' => 'required|string|max:1000',
+        ]);
+        
+        $post = PetPost::findOrFail($postId);
+        
+        $comment = PostComment::create([
+            'post_id' => $postId,
+            'user_id' => auth()->id(),
+            'content' => $request->content,
+        ]);
+        
+        $comment->load('user');
+        
+        return response()->json([
+            'success' => true,
+            'comment' => [
+                'id' => $comment->id,
+                'content' => $comment->content,
+                'user_name' => $comment->user->name,
+                'created_at' => $comment->created_at->diffForHumans(),
+            ]
+        ]);
     }
 }

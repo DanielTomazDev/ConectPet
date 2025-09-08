@@ -104,7 +104,7 @@
                             <div class="flex items-center justify-between mb-3">
                                 <div class="flex items-center space-x-4">
                                     <button onclick="togglePostLike({{ $post->id }})" class="flex items-center space-x-2 hover:opacity-75 transition-opacity duration-200">
-                                        <svg id="like-icon-{{ $post->id }}" class="w-6 h-6 text-gray-500 hover:text-red-500 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg id="like-icon-{{ $post->id }}" class="w-6 h-6 transition-colors duration-200 {{ in_array($post->id, $userLikedPosts) ? 'text-red-500 fill-current' : 'text-gray-500 hover:text-red-500' }}" fill="{{ in_array($post->id, $userLikedPosts) ? 'currentColor' : 'none' }}" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
                                         </svg>
                                         <span id="like-count-{{ $post->id }}" class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ $post->likes_count }}</span>
@@ -126,7 +126,39 @@
                             <!-- Comments Section -->
                             <div id="comments-{{ $post->id }}" class="border-t border-gray-200 dark:border-gray-600 pt-4">
                                 <div class="space-y-3 mb-4" id="comments-list-{{ $post->id }}">
-                                    <!-- Comentários serão implementados futuramente -->
+                                    @foreach($post->comments->take(3) as $comment)
+                                        <div class="flex items-start space-x-3">
+                                            <div class="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                                                <span class="text-xs font-bold text-white">{{ substr($comment->user->name, 0, 1) }}</span>
+                                            </div>
+                                            <div class="flex-1">
+                                                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                                                    <p class="text-sm text-gray-700 dark:text-gray-300">
+                                                        <span class="font-semibold">{{ $comment->user->name }}:</span> {{ $comment->content }}
+                                                    </p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ $comment->created_at->diffForHumans() }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                    
+                                    @if($post->comments->count() > 3)
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">Ver mais {{ $post->comments->count() - 3 }} comentários</p>
+                                    @endif
+                                </div>
+
+                                <!-- Comment Input -->
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center">
+                                        <span class="text-xs font-bold text-white">{{ substr(auth()->user()->name, 0, 1) }}</span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <input type="text" id="comment-input-{{ $post->id }}" placeholder="Adicione um comentário..." 
+                                               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                    </div>
+                                    <button onclick="addPostComment({{ $post->id }})" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-sm font-semibold transition-colors duration-200">
+                                        Publicar
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -271,5 +303,125 @@
                 });
             });
         });
+
+        // Toggle post like function
+        function togglePostLike(postId) {
+            console.log('Tentando curtir post:', postId);
+            
+            fetch(`/posts/${postId}/like`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => {
+                console.log('Resposta recebida:', response.status);
+                console.log('Content-Type:', response.headers.get('content-type'));
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    return response.text().then(text => {
+                        console.error('Resposta não é JSON:', text);
+                        throw new Error('Resposta não é JSON: ' + text.substring(0, 100));
+                    });
+                }
+                
+                return response.json();
+            })
+            .then(data => {
+                console.log('Dados recebidos:', data);
+                const likeIcon = document.getElementById(`like-icon-${postId}`);
+                const likeCount = document.getElementById(`like-count-${postId}`);
+                
+                if (likeIcon && likeCount) {
+                    if (data.liked) {
+                        likeIcon.classList.add('text-red-500', 'fill-current');
+                        likeIcon.classList.remove('text-gray-500');
+                        likeIcon.setAttribute('fill', 'currentColor');
+                    } else {
+                        likeIcon.classList.remove('text-red-500', 'fill-current');
+                        likeIcon.classList.add('text-gray-500');
+                        likeIcon.setAttribute('fill', 'none');
+                    }
+                    
+                    likeCount.textContent = data.likes_count;
+                } else {
+                    console.error('Elementos não encontrados:', `like-icon-${postId}`, `like-count-${postId}`);
+                }
+            })
+            .catch(error => {
+                console.error('Erro na requisição:', error);
+                alert('Erro ao curtir o post: ' + error.message);
+            });
+        }
+
+        // Add post comment function
+        function addPostComment(postId) {
+            console.log('Tentando comentar no post:', postId);
+            
+            const commentInput = document.getElementById(`comment-input-${postId}`);
+            const comment = commentInput.value.trim();
+            
+            if (!comment) {
+                console.log('Comentário vazio');
+                return;
+            }
+            
+            console.log('Comentário:', comment);
+            
+            fetch(`/posts/${postId}/comment`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ content: comment })
+            })
+            .then(response => {
+                console.log('Resposta do comentário:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Dados do comentário:', data);
+                if (data.success) {
+                    // Add comment to the list
+                    const commentsList = document.getElementById(`comments-list-${postId}`);
+                    if (commentsList) {
+                        const newComment = document.createElement('div');
+                        newComment.className = 'flex items-start space-x-3';
+                        newComment.innerHTML = `
+                            <div class="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                                <span class="text-xs font-bold text-white">${data.comment.user_name.charAt(0).toUpperCase()}</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                                    <p class="text-sm text-gray-700 dark:text-gray-300">
+                                        <span class="font-semibold">${data.comment.user_name}:</span> ${data.comment.content}
+                                    </p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${data.comment.created_at}</p>
+                                </div>
+                            </div>
+                        `;
+                        commentsList.appendChild(newComment);
+                        
+                        // Clear input
+                        commentInput.value = '';
+                    } else {
+                        console.error('Lista de comentários não encontrada:', `comments-list-${postId}`);
+                    }
+                } else {
+                    console.error('Erro ao adicionar comentário:', data);
+                }
+            })
+            .catch(error => {
+                console.error('Erro na requisição de comentário:', error);
+                alert('Erro ao comentar: ' + error.message);
+            });
+        }
     </script>
 </x-app-layout>

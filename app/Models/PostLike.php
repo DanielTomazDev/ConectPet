@@ -17,7 +17,7 @@ class PostLike extends Model
 
     public function post()
     {
-        return $this->belongsTo(Post::class);
+        return $this->belongsTo(PetPost::class, 'post_id');
     }
 
     public function user()
