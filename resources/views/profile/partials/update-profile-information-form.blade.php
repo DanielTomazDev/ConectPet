@@ -13,12 +13,37 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
+    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6" enctype="multipart/form-data">
         @csrf
         @method('patch')
 
+        <!-- Foto de Perfil -->
         <div>
-            <x-input-label for="name" :value="__('Name')" />
+            <x-input-label for="profile_picture" :value="__('Foto de Perfil')" />
+            <div class="mt-2 flex items-center space-x-4">
+                @if($user->profile_picture)
+                    <img src="{{ Storage::url($user->profile_picture) }}" 
+                         alt="Foto atual" 
+                         class="w-20 h-20 rounded-full object-cover border-2 border-gray-300">
+                @else
+                    <div class="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center border-2 border-gray-300">
+                        <span class="text-white text-xl font-bold">
+                            {{ strtoupper(substr($user->name, 0, 1)) }}
+                        </span>
+                    </div>
+                @endif
+                <div class="flex-1">
+                    <input id="profile_picture" name="profile_picture" type="file" 
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" 
+                           accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" />
+                    <p class="mt-1 text-xs text-gray-500">PNG, JPG, GIF, WEBP até 2MB</p>
+                    <x-input-error class="mt-2" :messages="$errors->get('profile_picture')" />
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <x-input-label for="name" :value="__('Nome')" />
             <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name', $user->name)" required autofocus autocomplete="name" />
             <x-input-error class="mt-2" :messages="$errors->get('name')" />
         </div>
@@ -45,6 +70,14 @@
                     @endif
                 </div>
             @endif
+        </div>
+
+        <div>
+            <x-input-label for="bio" :value="__('Biografia')" />
+            <textarea id="bio" name="bio" rows="4" 
+                      class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm" 
+                      placeholder="Conte um pouco sobre você...">{{ old('bio', $user->bio) }}</textarea>
+            <x-input-error class="mt-2" :messages="$errors->get('bio')" />
         </div>
 
         <div class="flex items-center gap-4">

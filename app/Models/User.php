@@ -25,7 +25,13 @@ class User extends Authenticatable
         'pet_id',
         'google_id',
         'profile_picture',
+        'bio',
     ];
+
+    public function pets()
+    {
+        return $this->hasMany(Pet::class);
+    }
 
     /**
      * The attributes that should be hidden for serialization.

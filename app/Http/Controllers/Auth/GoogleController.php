@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Str;
+use GuzzleHttp\Client;
 
 class GoogleController extends Controller
 {
@@ -16,7 +17,12 @@ class GoogleController extends Controller
      */
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')->redirect();
+        try {
+            return Socialite::driver('google')->redirect();
+        } catch (\Exception $e) {
+            \Log::error('Google OAuth Redirect Error: ' . $e->getMessage());
+            return redirect()->route('login')->with('error', 'Erro ao redirecionar para Google. Tente novamente.');
+        }
     }
 
     /**
@@ -25,7 +31,15 @@ class GoogleController extends Controller
     public function handleGoogleCallback()
     {
         try {
-            $googleUser = Socialite::driver('google')->user();
+            // Configure HTTP client options for SSL issues in local environment
+            $httpClient = new Client([
+                'verify' => config('app.env') === 'local' ? false : true,
+                'timeout' => 30,
+            ]);
+            
+            $googleUser = Socialite::driver('google')
+                ->setHttpClient($httpClient)
+                ->user();
             
             // Check if user already exists
             $user = User::where('email', $googleUser->getEmail())->first();
@@ -35,6 +49,7 @@ class GoogleController extends Controller
                 if (!$user->google_id) {
                     $user->update(['google_id' => $googleUser->getId()]);
                 }
+                Auth::login($user);
             } else {
                 // Create new user
                 $user = User::create([
@@ -45,15 +60,14 @@ class GoogleController extends Controller
                     'profile_picture' => $googleUser->getAvatar(),
                     'is_admin' => 0, // Default to regular user
                 ]);
+                
+                Auth::login($user);
             }
             
-            // Login the user
-            Auth::login($user);
-            
-            // Redirect to dashboard
-            return redirect()->route('dashboard');
+            return redirect()->intended(route('dashboard'));
             
         } catch (\Exception $e) {
+            \Log::error('Google OAuth Callback Error: ' . $e->getMessage());
             return redirect()->route('login')->with('error', 'Erro ao fazer login com Google: ' . $e->getMessage());
         }
     }
