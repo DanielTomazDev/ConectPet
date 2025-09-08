@@ -7,9 +7,9 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
                 </div>
-                <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                     {{ __('Feed da Comunidade') }}
-                </h2>
+        </h2>
             </div>
             <div class="text-sm text-gray-500 dark:text-gray-400">
                 {{ now()->format('d/m/Y') }}
@@ -19,29 +19,6 @@
 
     <div class="py-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <!-- Stats Cards -->
-            <div class="mb-8">
-                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
-                        <div>
-                            <div class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">{{ $petsCount }}</div>
-                            <p class="text-gray-600 dark:text-gray-400 font-semibold">Meus Pets</p>
-                        </div>
-                        <div>
-                            <div class="text-3xl font-bold text-green-600 dark:text-green-400">{{ $totalPets }}</div>
-                            <p class="text-gray-600 dark:text-gray-400 font-semibold">Total de Pets</p>
-                        </div>
-                        <div>
-                            <div class="text-3xl font-bold text-purple-600 dark:text-purple-400">{{ $totalUsers }}</div>
-                            <p class="text-gray-600 dark:text-gray-400 font-semibold">Usuários</p>
-                        </div>
-                        <div>
-                            <div class="text-3xl font-bold text-orange-600 dark:text-orange-400">{{ $totalMatches }}</div>
-                            <p class="text-gray-600 dark:text-gray-400 font-semibold">Matches</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Instagram-like Feed -->
             <div class="space-y-6">
@@ -190,7 +167,7 @@
                                 Cadastrar Primeiro Pet
                             </a>
                         </div>
-                    </div>
+                </div>
                 @endif
             </div>
         </div>
@@ -229,15 +206,10 @@
                     likeCount.textContent = data.like_count;
                     
                     // Show success message briefly
-                    console.log(data.message);
-                } else {
-                    console.error('Error:', data.message);
-                    alert('Erro: ' + data.message);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Erro ao curtir o pet');
             });
         }
 
@@ -304,9 +276,12 @@
             });
         });
 
-        // Toggle post like function
         function togglePostLike(postId) {
-            console.log('Tentando curtir post:', postId);
+            const button = document.querySelector(`[onclick="togglePostLike(${postId})"]`);
+            if (button.disabled) {
+                return;
+            }
+            button.disabled = true;
             
             fetch(`/posts/${postId}/like`, {
                 method: 'POST',
@@ -315,26 +290,8 @@
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 }
             })
-            .then(response => {
-                console.log('Resposta recebida:', response.status);
-                console.log('Content-Type:', response.headers.get('content-type'));
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    return response.text().then(text => {
-                        console.error('Resposta não é JSON:', text);
-                        throw new Error('Resposta não é JSON: ' + text.substring(0, 100));
-                    });
-                }
-                
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Dados recebidos:', data);
                 const likeIcon = document.getElementById(`like-icon-${postId}`);
                 const likeCount = document.getElementById(`like-count-${postId}`);
                 
@@ -350,29 +307,32 @@
                     }
                     
                     likeCount.textContent = data.likes_count;
-                } else {
-                    console.error('Elementos não encontrados:', `like-icon-${postId}`, `like-count-${postId}`);
                 }
             })
             .catch(error => {
-                console.error('Erro na requisição:', error);
-                alert('Erro ao curtir o post: ' + error.message);
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                const button = document.querySelector(`[onclick="togglePostLike(${postId})"]`);
+                if (button) {
+                    button.disabled = false;
+                }
             });
         }
 
-        // Add post comment function
         function addPostComment(postId) {
-            console.log('Tentando comentar no post:', postId);
-            
             const commentInput = document.getElementById(`comment-input-${postId}`);
             const comment = commentInput.value.trim();
             
             if (!comment) {
-                console.log('Comentário vazio');
                 return;
             }
             
-            console.log('Comentário:', comment);
+            const button = document.querySelector(`[onclick="addPostComment(${postId})"]`);
+            if (button.disabled) {
+                return;
+            }
+            button.disabled = true;
             
             fetch(`/posts/${postId}/comment`, {
                 method: 'POST',
@@ -382,14 +342,9 @@
                 },
                 body: JSON.stringify({ content: comment })
             })
-            .then(response => {
-                console.log('Resposta do comentário:', response.status);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                console.log('Dados do comentário:', data);
                 if (data.success) {
-                    // Add comment to the list
                     const commentsList = document.getElementById(`comments-list-${postId}`);
                     if (commentsList) {
                         const newComment = document.createElement('div');
@@ -408,19 +363,18 @@
                             </div>
                         `;
                         commentsList.appendChild(newComment);
-                        
-                        // Clear input
                         commentInput.value = '';
-                    } else {
-                        console.error('Lista de comentários não encontrada:', `comments-list-${postId}`);
                     }
-                } else {
-                    console.error('Erro ao adicionar comentário:', data);
                 }
             })
             .catch(error => {
-                console.error('Erro na requisição de comentário:', error);
-                alert('Erro ao comentar: ' + error.message);
+                console.error('Error:', error);
+            })
+            .finally(() => {
+                const button = document.querySelector(`[onclick="addPostComment(${postId})"]`);
+                if (button) {
+                    button.disabled = false;
+                }
             });
         }
     </script>

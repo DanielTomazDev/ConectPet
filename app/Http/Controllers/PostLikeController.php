@@ -13,49 +13,34 @@ class PostLikeController extends Controller
      */
     public function toggle(Request $request, $postId)
     {
-        try {
-            \Log::info('PostLikeController::toggle called', ['postId' => $postId, 'user' => auth()->id()]);
-            
-            $post = PetPost::findOrFail($postId);
-            $user = auth()->user();
-            
-            if (!$user) {
-                \Log::error('User not authenticated');
-                return response()->json(['error' => 'User not authenticated'], 401);
-            }
-            
-            $existingLike = PostLike::where('post_id', $postId)
-                ->where('user_id', $user->id)
-                ->first();
-            
-            if ($existingLike) {
-                // Remove like
-                $existingLike->delete();
-                $liked = false;
-                \Log::info('Like removed');
-            } else {
-                // Add like
-                PostLike::create([
-                    'post_id' => $postId,
-                    'user_id' => $user->id,
-                ]);
-                $liked = true;
-                \Log::info('Like added');
-            }
-            
-            // Update likes count
-            $likesCount = PostLike::where('post_id', $postId)->count();
-            $post->update(['likes_count' => $likesCount]);
-            
-            \Log::info('Response data', ['liked' => $liked, 'likes_count' => $likesCount]);
-            
-            return response()->json([
-                'liked' => $liked,
-                'likes_count' => $likesCount
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Error in PostLikeController::toggle', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            return response()->json(['error' => $e->getMessage()], 500);
+        $post = PetPost::findOrFail($postId);
+        $user = auth()->user();
+        
+        if (!$user) {
+            return response()->json(['error' => 'User not authenticated'], 401);
         }
+        
+        $existingLike = PostLike::where('post_id', $postId)
+            ->where('user_id', $user->id)
+            ->first();
+        
+        if ($existingLike) {
+            $existingLike->delete();
+            $liked = false;
+        } else {
+            PostLike::create([
+                'post_id' => $postId,
+                'user_id' => $user->id,
+            ]);
+            $liked = true;
+        }
+        
+        $likesCount = PostLike::where('post_id', $postId)->count();
+        $post->update(['likes_count' => $likesCount]);
+        
+        return response()->json([
+            'liked' => $liked,
+            'likes_count' => $likesCount
+        ]);
     }
 }

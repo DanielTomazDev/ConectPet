@@ -25,10 +25,6 @@ Route::get('/teste-auth', function () {
 
 Route::get('/dashboard', function () {
     $user = auth()->user();
-    $petsCount = $user->pets()->count();
-    $totalPets = \App\Models\Pet::count();
-    $totalUsers = \App\Models\User::count();
-    $totalMatches = \App\Models\PetMatch::count();
     
     // Buscar todos os posts dos pets com usuários e pets
     $allPosts = \App\Models\PetPost::with(['pet.user', 'likes', 'comments.user'])->latest()->paginate(10);
@@ -36,7 +32,7 @@ Route::get('/dashboard', function () {
     // Marcar quais posts o usuário já curtiu
     $userLikedPosts = \App\Models\PostLike::where('user_id', $user->id)->pluck('post_id')->toArray();
     
-    return view('dashboard', compact('petsCount', 'totalPets', 'totalUsers', 'totalMatches', 'allPosts', 'userLikedPosts'));
+    return view('dashboard', compact('allPosts', 'userLikedPosts'));
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
@@ -82,13 +78,4 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/pets/{pet}/posts/{post}', [App\Http\Controllers\PetPostController::class, 'update'])->name('pet-posts.update');
     Route::delete('/pets/{pet}/posts/{post}', [App\Http\Controllers\PetPostController::class, 'destroy'])->name('pet-posts.destroy');
     
-    // Rota de teste
-    Route::get('/test-posts', function() {
-        return response()->json(['message' => 'Posts routes working']);
-    });
-    
-    // Rota de teste para curtidas
-    Route::post('/test-like/{post}', function($post) {
-        return response()->json(['message' => 'Like test working', 'post' => $post]);
-    });
 });
