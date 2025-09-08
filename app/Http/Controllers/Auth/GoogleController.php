@@ -31,8 +31,10 @@ class GoogleController extends Controller
             $user = User::where('email', $googleUser->getEmail())->first();
             
             if ($user) {
-                // User exists, log them in
-                Auth::login($user);
+                // User exists, update google_id if not set
+                if (!$user->google_id) {
+                    $user->update(['google_id' => $googleUser->getId()]);
+                }
             } else {
                 // Create new user
                 $user = User::create([
@@ -43,14 +45,16 @@ class GoogleController extends Controller
                     'profile_picture' => $googleUser->getAvatar(),
                     'is_admin' => 0, // Default to regular user
                 ]);
-                
-                Auth::login($user);
             }
             
-            return redirect()->intended(route('dashboard'));
+            // Login the user
+            Auth::login($user);
+            
+            // Redirect to dashboard
+            return redirect()->route('dashboard');
             
         } catch (\Exception $e) {
-            return redirect()->route('login')->with('error', 'Erro ao fazer login com Google. Tente novamente.');
+            return redirect()->route('login')->with('error', 'Erro ao fazer login com Google: ' . $e->getMessage());
         }
     }
 }
